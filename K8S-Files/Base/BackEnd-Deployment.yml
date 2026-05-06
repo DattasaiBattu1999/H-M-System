@@ -1,0 +1,64 @@
+# Backend Deployment for Hospital Management System 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hms-backend  
+  namespace: prod
+  labels:
+    app: Hospital-Management-System
+    env: prod
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate 
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels: 
+      app: hms-backend-pod
+  template:
+    metadata:
+      labels:
+        app: hms-backend-pod
+    spec:
+      containers:
+      - name: hms-backend
+        image: dattasai1999/h-m-system:backend
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        
+        env:
+        - name: hms-db
+          value: "hms-db"
+        - name: DB_USER
+          value: "root"
+        - name: DB_NAME
+          value: "hospital_db"
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hms-secrets
+              key: db-password
+
+        resources:
+          requests:
+            memory: "150Mi" 
+            cpu: "100m"
+          limits:
+            memory: "300Mi"
+            cpu: "300m"
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20

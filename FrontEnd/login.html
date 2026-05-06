@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | CarePoint Health</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <a href="index.html" class="back-home">
+        <i class="fas fa-arrow-left"></i> Back to Home
+    </a>
+
+    <div class="register-container">
+        <div class="page-header">
+            <p>New to CarePoint? <a href="register.html">Create an account</a></p>
+        </div>
+
+        <div class="form-card">
+            <div class="form-header" style="text-align: center; margin-bottom: 30px;">
+                <div class="icon-circle" style="background: var(--primary-light); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="fas fa-user" style="font-size: 1.5rem; color: var(--primary);"></i>
+                </div>
+                <h2>Patient Login</h2>
+                <p>Access your health records and appointments</p>
+            </div>
+
+            <form id="loginForm">
+                <div class="input-block">
+                    <label>Email or Mobile Number</label>
+                    <input type="text" id="loginEmail" placeholder="Enter your credentials" required>
+                </div>
+                <div class="input-block">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Sign In</button>
+            </form>
+
+            <div style="margin-top: 25px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;">Are you a Staff member or Doctor?</p>
+                <a href="admin-login.html" class="btn-secondary" style="display: inline-block; text-decoration: none;">
+                    <i class="fas fa-user-shield"></i> Staff Administration Portal
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="Js/auth.js"></script>
+</body>
+</html>

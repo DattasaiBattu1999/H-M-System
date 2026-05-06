@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Patient Portal | CarePoint</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+
+    <nav class="admin-nav">
+        <h2><i class="fas fa-hand-holding-medical"></i> My Health Portal</h2>
+        <div class="nav-right">
+            <span id="patientName" style="color:white; margin-right:15px; font-weight: bold;"></span>
+            <button onclick="logout()" class="btn-logout">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Visits</h3>
+                <p id="totalVisits">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Latest BP</h3>
+                <p id="lastBP">--/--</p>
+            </div>
+            <div class="stat-card">
+                <h3>Weight</h3>
+                <p id="lastWeight">-- kg</p>
+            </div>
+        </div>
+
+        <div class="search-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom: 20px;">
+                <h3><i class="fas fa-history"></i> Medical History & Prescriptions</h3>
+                <button onclick="loadPatientDashboard()" class="btn-secondary" style="font-size:0.8rem;">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+
+            <div id="historyContainer">
+                <div style="text-align:center; padding:40px; color:#64748b;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Loading your health records...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="Js/auth.js"></script>
+    <script src="Js/patient.js"></script>
+
+</body>
+
+</html>

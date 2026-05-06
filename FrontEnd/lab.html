@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Dashboard - CarePoint</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+            --success: #16a34a;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            margin: 0;
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .container {
+            padding: 30px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .table th {
+            background: #f8fafc;
+            text-align: left;
+            padding: 12px;
+            font-size: 14px;
+        }
+
+        .table td {
+            padding: 12px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: white;
+        }
+
+        .badge-pending {
+            background: var(--warning);
+        }
+
+        .badge-done {
+            background: var(--success);
+        }
+
+        .btn {
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-upload {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-refresh {
+            background: #e2e8f0;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type=file] {
+            font-size: 12px;
+        }
+
+        .footer-note {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h2><i class="fa-solid fa-flask"></i> Lab Dashboard</h2>
+        <div class="actions">
+            <span id="userName" style="color:white; font-weight:bold; margin-right:15px;"></span>
+            <button class="btn btn-refresh" onclick="loadQueue()">
+                <i class="fa fa-sync"></i> Refresh
+            </button>
+            <button class="btn btn-refresh" onclick="logout()">
+                <i class="fa fa-sign-out"></i> Logout
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <div class="card">
+
+            <h3>🧪 Lab Test Queue</h3>
+
+            <table class="table">
+
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Test</th>
+                        <th>Status</th>
+                        <th>Upload Report</th>
+                    </tr>
+                </thead>
+
+                <tbody id="labQueue">
+
+                    <tr>
+                        <td colspan="4">Loading queue...</td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+            <div class="footer-note">
+                Queue refreshes automatically every 60 seconds
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        async function loadQueue() {
+
+            const res = await fetch(`${API_URL}/lab-queue`);
+            const data = await res.json();
+
+            const table = document.getElementById("labQueue");
+
+            if (data.length === 0) {
+                table.innerHTML = "<tr><td colspan='4'>No pending tests</td></tr>";
+                return;
+            }
+
+            table.innerHTML = "";
+
+            data.forEach(row => {
+
+                const tr = document.createElement("tr");
+
+                tr.innerHTML = `
+<td>${row.patient_name}</td>
+
+<td>${row.test_name}</td>
+
+<td>
+<span class="badge badge-pending">
+Pending
+</span>
+</td>
+
+<td>
+
+<input type="file" id="file-${row.id}">
+
+<button class="btn btn-upload"
+onclick="uploadReport(${row.id})">
+Upload
+</button>
+
+</td>
+`;
+
+                table.appendChild(tr);
+
+            });
+
+        }
+
+        async function uploadReport(id) {
+            const fileInput = document.getElementById(`file-${id}`);
+
+            if (!fileInput || !fileInput.files[0]) {
+                alert("Please select a file first.");
+                return;
+            }
+
+            const formData = new FormData();
+            // THE KEY MUST BE 'report' TO MATCH upload.single('report')
+            formData.append("report", fileInput.files[0]);
+
+            try {
+                const res = await fetch(`${API_URL}/upload-report/${id}`, {
+                    method: "POST",
+                    // DO NOT add headers: { 'Content-Type': '...' } here!
+                    body: formData
+                });
+
+                const result = await res.json();
+
+                if (result.success) {
+                    alert("Upload Successful!");
+                    loadQueue(); // Refresh your table
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (err) {
+                console.error("Upload failed:", err);
+                alert("Failed to reach the server.");
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = "login.html";
+        }
+
+        loadQueue();
+
+        setInterval(loadQueue, 60000);
+
+    </script>
+    <script src="Js/auth.js"></script>
+    <script src="Js/lab.js"></script>
+</body>
+
+</html>

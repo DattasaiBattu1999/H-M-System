@@ -1,0 +1,19 @@
+# Ignore Terraform binaries and state
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# Ignore Node dependencies
+node_modules/
+
+# Ignore uploads
+BackEnd/reports/*
+
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+node_modules/
+BackEnd/reports/*
+.env

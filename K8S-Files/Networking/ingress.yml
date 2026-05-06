@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hms-ingress
+  namespace: prod
+spec:
+  rules:
+    - http:
+        paths:
+          # --- FRONTEND RULE ---
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hms-frontend-svc
+                port:
+                  number: 80
+          
+          # --- BACKEND RULE ---
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: hms-backend-svc
+                port:
+                  number: 3000

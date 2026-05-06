@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Doctor Desk | CarePoint</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <nav class="admin-nav">
+        <h2><i class="fas fa-user-md"></i> Doctor Desk</h2>
+        <div class="nav-right">
+            <span id="userName" style="color:white; margin-right:15px; font-weight:bold;"></span>
+            <button onclick="logout()" class="btn-logout">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="search-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h3><i class="fas fa-users"></i> Patient Queue</h3>
+                <button onclick="loadDoctorQueue()" class="btn-secondary" style="font-size:0.8rem;">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div id="queueResults" style="margin-top:20px;"></div>
+        </div>
+    </div>
+
+    <div id="notesModal" class="modal">
+        <div class="modal-content" style="max-width:1100px;width:95%; max-height: 90vh; overflow-y: auto;">
+            <input type="hidden" id="activeAppointmentId">
+            <div class="record-header" id="consultationHeader"></div>
+
+            <div class="record-body" style="display:grid;grid-template-columns:1.1fr 1fr;gap:25px;padding:20px;">
+
+                <div class="left-panel" style="border-right:1px solid #eee;padding-right:20px;">
+                    <h4><i class="fas fa-chart-line"></i> Weight Trend</h4>
+                    <div style="height:180px;margin-bottom:10px;">
+                        <canvas id="vitalsChart"></canvas>
+                    </div>
+                    <p id="bmiDisplay" style="font-weight:600; margin-bottom:15px; color: var(--primary);"></p>
+
+                    <h4><i class="fas fa-history"></i> Medical History</h4>
+                    <div id="doctorHistory"
+                        style="max-height:200px;overflow-y:auto;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:15px;">
+                    </div>
+
+                    <h4><i class="fas fa-edit"></i> Clinical Notes</h4>
+                    <textarea id="clinicalNotes" placeholder="Symptoms, diagnosis..."
+                        style="width:100%;height:120px;padding:10px;border-radius:8px;border:1px solid #ddd;"></textarea>
+                </div>
+
+                <div class="right-panel">
+                    <h4><i class="fas fa-pills"></i> E-Prescription</h4>
+                    <div id="medicineList"
+                        style="max-height:220px; overflow-y:auto; margin-bottom:10px; padding-right: 5px;">
+                        <div class="med-row" style="display:flex; gap:10px; margin-bottom:12px; align-items: center;">
+                            <input type="text" placeholder="Medicine Name (e.g. Paracetamol)" class="med-input med-name"
+                                style="flex: 2.5; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <input type="text" placeholder="Freq (1-0-1)" class="med-input med-freq"
+                                style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <input type="text" placeholder="Days" class="med-input med-dur"
+                                style="flex: 0.8; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        </div>
+                    </div>
+                    <button onclick="addMedRow()" class="btn-secondary"
+                        style="width:100%;margin-bottom:20px;padding:8px;border:1px dashed var(--primary);">
+                        <i class="fas fa-plus"></i> Add Medicine Row
+                    </button>
+
+                    <div class="lab-card"
+                        style="background: #f0fdfa; padding: 15px; border-radius: 12px; border: 1px solid #ccfbf1;">
+                        <h4 style="color: #0f766e;"><i class="fa fa-flask"></i> Lab Request</h4>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <input type="text" id="testName" placeholder="e.g. CBC, Lipid Profile"
+                                style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #99f6e4;">
+                            <button class="btn-primary" onclick="addTestRow()" style="padding: 8px 15px;">Add</button>
+                        </div>
+                        <ul id="prescribedTests"
+                            style="margin: 10px 0; font-size: 0.9rem; list-style: none; padding: 0;"></ul>
+
+                        <button class="btn-warning" onclick="sendToLab()"
+                            style="width: 100%; background: #f59e0b; color: white; padding: 10px; border: none; border-radius: 8px; font-weight: bold; margin-top: 5px;">
+                            <i class="fa fa-paper-plane"></i> SEND TO LAB QUEUE
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding:20px; display:flex; justify-content:flex-end; gap:15px; border-top:1px solid #eee;">
+                <button onclick="closeNotes()" class="btn-logout" style="background:#94a3b8;">DISCARD</button>
+                <button onclick="completeConsultation()" class="btn-primary" style="padding:12px 30px;">
+                    <i class="fas fa-check-circle"></i> COMPLETE & SAVE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="Js/auth.js"></script>
+    <script src="Js/doctor.js"></script>
+</body>
+
+</html>

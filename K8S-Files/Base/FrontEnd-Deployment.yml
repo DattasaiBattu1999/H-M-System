@@ -1,0 +1,49 @@
+# Frontend Deployment for Hospital Management System
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hms-frontend
+  namespace: prod
+  labels:
+    app: Hospital-Management-System
+    env: prod
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: hms-frontend-pod # Best practice: use a specific pod label
+  template:
+    metadata:
+      labels:
+        app: hms-frontend-pod
+    spec:
+      containers:
+      - name: hms-frontend
+        image: dattasai1999/h-m-system:frontend
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "100m"
+          limits:
+            memory: "200Mi"
+            cpu: "200m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20

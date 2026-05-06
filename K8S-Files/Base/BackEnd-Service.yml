@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hms-backend-svc
+  namespace: prod
+spec:
+  selector:
+    app: hms-backend-pod
+  ports:
+  - protocol: TCP
+    port: 3000      
+    targetPort: 3000 
+  type: ClusterIP 

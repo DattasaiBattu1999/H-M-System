@@ -1,0 +1,74 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = "ap-south-1"
+        CLUSTER_NAME = "hm-eks-cluster"
+    }
+
+    stages {
+        stage('Fetch Artifact from CI') {
+            steps {
+                copyArtifacts(
+                    projectName: 'H-M-System CI',
+                    selector: lastSuccessful()
+                )
+                script {
+                    env.IMAGE_TAG = readFile('image_tag.txt').trim()
+                    echo "Deploying Version: ${env.IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Terraform Init & Apply') {
+            steps {
+                dir('Terraform') {
+                    sh 'terraform init'
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Update kubeconfig') {
+            steps {
+                sh "aws eks --region $AWS_REGION update-kubeconfig --name $CLUSTER_NAME"
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh """
+                    # Update placeholders in ALL nested subdirectories
+                    find K8S-Files/ -name "*.yml" -exec sed -i "s|IMAGE_TAG|${IMAGE_TAG}|g" {} +
+                    
+                    # Sequential deployment based on your folder structure
+                    kubectl apply -f K8S-Files/Security/
+                    kubectl apply -f K8S-Files/Base/
+                    kubectl apply -f K8S-Files/Networking/
+                    kubectl apply -f K8S-Files/Auto-scalling/
+                """
+            }
+        }
+
+        stage('Verify Rollout') {
+            steps {
+                script {
+                    sh 'kubectl rollout status deployment/backend-deployment'
+                    sh 'kubectl rollout status deployment/frontend-deployment'
+                    
+                    sh 'kubectl get pods'
+                    sh 'kubectl get svc'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment of version ${IMAGE_TAG} successful!"
+        }
+        failure {
+            echo "Deployment failed! Check Kubernetes logs."
+        }
+    }
+}

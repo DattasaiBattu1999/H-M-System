@@ -1,0 +1,101 @@
+//H-M-System CI Pipeline.
+pipeline {
+    agent any
+
+    tools {
+        nodejs "NodeJs"
+    }
+
+    environment {
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        DOCKER_REPO = "dattasai1999/h-m-system"
+    }
+
+    stages {
+
+        stage('Code') {
+            steps {
+                git credentialsId: 'GitHub', url: 'https://github.com/DattasaiBattu1999/H-M-System.git'
+            }
+        }
+
+        stage('Install dependencies (with cache)') {
+            steps {
+                dir('BackEnd') {
+                    sh 'npm install --cache .npm --prefer-offline'
+                }
+            }
+        }
+
+        stage('Code-Quality-Analysis') {
+            steps {
+                script {
+                    def scannerHome = tool 'MySonar'
+                    withSonarQubeEnv('MySonar') {
+                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=H-M-System"
+                    }
+                }
+            }
+        }
+
+        stage('Quality-Gates') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage("Docker Build (with cache)") {
+            steps {
+                sh "docker build -t $DOCKER_REPO:frontend-$IMAGE_TAG ./FrontEnd || true"
+                sh "docker build -t $DOCKER_REPO:backend-$IMAGE_TAG ./BackEnd || true"
+                sh "docker build -t $DOCKER_REPO:database-$IMAGE_TAG ./DataBase || true"
+            }
+        }
+
+        stage("Security Scan (Trivy)") {
+            steps {
+                sh "trivy image --exit-code 1 --severity CRITICAL $DOCKER_REPO:frontend-$IMAGE_TAG"
+                sh "trivy image --exit-code 1 --severity CRITICAL $DOCKER_REPO:backend-$IMAGE_TAG"
+                sh "trivy image --severity HIGH,CRITICAL $DOCKER_REPO:database-$IMAGE_TAG"
+            }
+        }
+
+        stage("Docker Login & Push") {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'DockerHub',
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASS')]) {
+
+                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                    
+                    sh "docker push $DOCKER_REPO:frontend-$IMAGE_TAG"
+                    sh "docker push $DOCKER_REPO:backend-$IMAGE_TAG"
+                    sh "docker push $DOCKER_REPO:database-$IMAGE_TAG"
+                }
+            }
+        }
+
+        stage("Save Artifact (for CD)") {
+            steps {
+                writeFile file: 'image_tag.txt', text: "${IMAGE_TAG}"
+                archiveArtifacts artifacts: 'image_tag.txt'
+            }
+        }
+    }
+
+    post {
+		always {
+			mail(
+				to: 'battudattasai99@gmail.com',
+				subject: "Pipeline Status: ${currentBuild.currentResult} - ${env.JOB_NAME} # ${env.BUILD_NUMBER}",
+				body: """
+					Build Status: ${currentBuild.currentResult},
+					Job: ${env.JOB_NAME},
+					Build Number: ${env.BUILD_NUMBER},
+					Full URL: ${env.RUN_DISPLAY_URL}
+			""")
+		}
+    }
+}

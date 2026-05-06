@@ -1,0 +1,52 @@
+# This YAML file defines a StatefulSet for the Hospital Management System's database component.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hms-db    
+  namespace: prod
+spec:
+  serviceName: "hms-db" 
+  replicas: 1  
+  selector:
+    matchLabels:
+      app: hms-db-pod  
+  template:
+    metadata:
+      labels:
+        app: hms-db-pod
+    spec:
+      containers:
+      - name: hms-db
+        image: dattasai1999/h-m-system:database
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hms-secrets
+              key: db-password
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: db-storage
+          mountPath: /var/lib/mysql
+
+        livenessProbe:
+          tcpSocket:
+            port: 3306
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      
+        readinessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost"]
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      
+  volumeClaimTemplates:
+  - metadata:
+      name: db-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 5Gi

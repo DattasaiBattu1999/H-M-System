@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Portal | CarePoint</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="background-color: #f8fafc;">
+
+    <a href="login.html" class="back-home">
+        <i class="fas fa-chevron-left"></i> Patient Login
+    </a>
+
+    <div class="register-container">
+        <div class="form-card" style="border-top: 4px solid #ef4444;"> <div class="form-header" style="text-align: center; margin-bottom: 30px;">
+                <div class="icon-circle" style="background: #fee2e2; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="fas fa-shield-halved" style="font-size: 1.5rem; color: #ef4444;"></i>
+                </div>
+                <h2>Staff Administration</h2>
+                <p>Authorized Personnel Only</p>
+            </div>
+
+            <form id="loginForm">
+                <div class="input-block">
+                    <label>Admin Email</label>
+                    <input type="text" id="loginEmail" placeholder="admin@carepoint.com" required>
+                </div>
+                <div class="input-block">
+                    <label>Secure Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; background-color: #1e293b; border: none;">
+                    Secure Login
+                </button>
+            </form>
+
+            <div style="margin-top: 20px; text-align: center;">
+                <small style="color: #94a3b8;">
+                    <i class="fas fa-info-circle"></i> IP address and login attempts are being logged.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <script src="Js/auth.js"></script>
+</body>
+</html>
