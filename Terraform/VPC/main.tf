@@ -1,77 +1,173 @@
-# Fetch all available Availability Zones in the current region
-data "aws_availability_zones" "available" {}
+# --------------------------------
+# VPC
+# --------------------------------
 
 resource "aws_vpc" "hms_vpc" {
-  cidr_block = var.vpc_cidr
-  tags       = { Name = "hm-system-vpc" }
+
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
+  tags = {
+    Name = var.vpc_name
+  }
 }
 
-resource "aws_internet_gateway" "hms-igw" {
+# --------------------------------
+# Internet Gateway
+# --------------------------------
+
+resource "aws_internet_gateway" "internet_gateway" {
+
   vpc_id = aws_vpc.hms_vpc.id
+
+  tags = {
+    Name = var.internet_gateway_name
+  }
 }
 
-resource "aws_subnet" "public" {
-  count                   = length(var.public_subnets)
-  vpc_id                  = aws_vpc.hms_vpc.id
-  cidr_block              = var.public_subnets[count.index]
+# --------------------------------
+# Availability Zones
+# --------------------------------
+
+data "aws_availability_zones" "available" {}
+
+# --------------------------------
+# Public Subnets
+# --------------------------------
+
+resource "aws_subnet" "public_subnet" {
+
+  count = length(var.public_subnets)
+
+  vpc_id = aws_vpc.hms_vpc.id
+
+  cidr_block = var.public_subnets[count.index]
+
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+
   map_public_ip_on_launch = true
 
-  # Cycle through available AZs (e.g., 0 -> ap-southeast-1a, 1 -> ap-southeast-1b)
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+  tags = {
+    Name = "public-subnet-${count.index + 1}"
 
-  tags = { Name = "public-subnet-${count.index}" }
+    "kubernetes.io/role/elb" = "1"
+  }
 }
 
-resource "aws_subnet" "private" {
-  count      = length(var.private_subnets)
-  vpc_id     = aws_vpc.hms_vpc.id
+# --------------------------------
+# Private Subnets
+# --------------------------------
+
+resource "aws_subnet" "private_subnet" {
+
+  count = length(var.private_subnets)
+
+  vpc_id = aws_vpc.hms_vpc.id
+
   cidr_block = var.private_subnets[count.index]
 
-  # Ensure private subnets are also spread across AZs
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
-  tags = { Name = "private-subnet-${count.index}" }
+  tags = {
+    Name = "private-subnet-${count.index + 1}"
+
+    "kubernetes.io/role/internal-elb" = "1"
+  }
 }
 
-# Routing for Public Subnets
-resource "aws_route_table" "public" {
+# --------------------------------
+# Public Route Table
+# --------------------------------
+
+resource "aws_route_table" "public_route_table" {
+
   vpc_id = aws_vpc.hms_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+
+    gateway_id = aws_internet_gateway.internet_gateway.id
+  }
+
+  tags = {
+    Name = var.public_route_table_name
+  }
 }
 
-resource "aws_route" "public_internet" {
-  route_table_id         = aws_route_table.public.id
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.hms-igw.id
+# --------------------------------
+# Public Route Table Association
+# --------------------------------
+
+resource "aws_route_table_association" "public_assoc" {
+
+  count = length(var.public_subnets)
+
+  subnet_id = aws_subnet.public_subnet[count.index].id
+
+  route_table_id = aws_route_table.public_route_table.id
 }
 
-resource "aws_route_table_association" "public" {
-  count          = length(aws_subnet.public)
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
-}
+# --------------------------------
+# Elastic IP for NAT Gateway
+# --------------------------------
 
-# NAT Gateway logic for Private Subnets
-resource "aws_eip" "nat" {
+resource "aws_eip" "nat_eip" {
+
   domain = "vpc"
+
+  tags = {
+    Name = "nat-eip"
+  }
 }
 
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id # Place NAT in the first public subnet
+# --------------------------------
+# NAT Gateway
+# --------------------------------
+
+resource "aws_nat_gateway" "hms_nat_gateway" {
+
+  allocation_id = aws_eip.nat_eip.id
+
+  subnet_id = aws_subnet.public_subnet[0].id
+
+  tags = {
+    Name = "hms-nat-gateway"
+  }
+
+  depends_on = [
+    aws_internet_gateway.internet_gateway
+  ]
 }
 
-resource "aws_route_table" "private" {
+# --------------------------------
+# Private Route Table
+# --------------------------------
+
+resource "aws_route_table" "private_route_table" {
+
   vpc_id = aws_vpc.hms_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+
+    nat_gateway_id = aws_nat_gateway.hms_nat_gateway.id
+  }
+
+  tags = {
+    Name = var.private_route_table_name
+  }
 }
 
-resource "aws_route" "private_nat" {
-  route_table_id         = aws_route_table.private.id
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.nat.id
-}
+# --------------------------------
+# Private Route Table Association
+# --------------------------------
 
-resource "aws_route_table_association" "private" {
-  count          = length(aws_subnet.private)
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
+resource "aws_route_table_association" "private_assoc" {
+
+  count = length(var.private_subnets)
+
+  subnet_id = aws_subnet.private_subnet[count.index].id
+
+  route_table_id = aws_route_table.private_route_table.id
 }

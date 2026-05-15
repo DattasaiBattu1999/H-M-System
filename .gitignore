@@ -1,20 +1,52 @@
-# Ignore Terraform binaries and state
-.terraform/
+# ==========================================
+# Terraform
+# ==========================================
+
+**/.terraform/*
 *.tfstate
-*.tfstate.backup
+*.tfstate.*
+*.tfvars
 .terraform.lock.hcl
 
-# Ignore Node dependencies
+# ==========================================
+# Node.js
+# ==========================================
+
 node_modules/
 
-# Ignore uploads
-BackEnd/reports/*
+# ==========================================
+# Environment Files
+# ==========================================
 
-.terraform/
-.terraform.lock.hcl
-*.tfstate
-*.tfstate.backup
-node_modules/
-BackEnd/reports/*
 .env
-H-M-System.pem
+
+# ==========================================
+# Sensitive Files
+# ==========================================
+
+*.pem
+
+# ==========================================
+# Reports / Uploads
+# ==========================================
+
+BackEnd/reports/*
+
+# ==========================================
+# Logs
+# ==========================================
+
+*.log
+
+# ==========================================
+# OS Files
+# ==========================================
+
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# VS Code
+# ==========================================
+
+.vscode/
