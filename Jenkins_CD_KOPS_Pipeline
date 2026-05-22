@@ -3,10 +3,10 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION      = "ap-south-1" 
-        CLUSTER_NAME    = "hm-kops-cluster.k8s.local" 
+        AWS_REGION       = "ap-south-1" 
+        CLUSTER_NAME     = "hm-kops-cluster.k8s.local" 
         KOPS_STATE_STORE = "s3://aws-hm-system-bucket" 
-        K8S_NAMESPACE   = "default" 
+        K8S_NAMESPACE    = "Prod" 
     }
 
     stages {
@@ -40,18 +40,18 @@ pipeline {
                     # 1. Safety Check: Create the namespace if it doesn't exist
                     kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}
 
-                    # Create clean runtime copies of manifests
+                    # 2. Create clean runtime copies of manifests
                     rm -rf K8S-Generated
                     cp -r K8S-Files K8S-Generated
                     
-                    # Target and swap image tags safely
+                    # 3. Target and swap image tags safely
                     find K8S-Generated/ -name "*.yml" -exec sed -i "s|IMAGE_TAG|${IMAGE_TAG}|g" {} +
                     
-                    # Apply manifest groups sequentially to KOPS
-                    kubectl apply -f K8S-Generated/Security/
-                    kubectl apply -f K8S-Generated/Base/
-                    kubectl apply -f K8S-Generated/Networking/
-                    kubectl apply -f K8S-Generated/Auto-scalling/
+                    # 4. Apply manifest groups sequentially forcing your namespace flag
+                    kubectl apply -f K8S-Generated/Security/ -n ${K8S_NAMESPACE}
+                    kubectl apply -f K8S-Generated/Base/ -n ${K8S_NAMESPACE}
+                    kubectl apply -f K8S-Generated/Networking/ -n ${K8S_NAMESPACE}
+                    kubectl apply -f K8S-Generated/Auto-scalling/ -n ${K8S_NAMESPACE}
                 """
             }
         }
@@ -74,7 +74,7 @@ pipeline {
             sh "rm -rf K8S-Generated"
         }
         success {
-            echo "Deployment of version ${IMAGE_TAG} successful to KOPS!"
+            echo "Deployment of version ${IMAGE_TAG} successful to KOPS cluster!"
         }
         failure {
             echo "Deployment failed! Check KOPS cluster or Kubernetes logs."
