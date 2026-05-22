@@ -1,4 +1,3 @@
-# This YAML file defines a StatefulSet for the Hospital Management System's database component.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -37,8 +36,8 @@ spec:
           periodSeconds: 10
       
         readinessProbe:
-          exec:
-            command: ["mysqladmin", "ping", "-h", "localhost"]
+          tcpSocket:
+            port: 3306
           initialDelaySeconds: 10
           periodSeconds: 5
       

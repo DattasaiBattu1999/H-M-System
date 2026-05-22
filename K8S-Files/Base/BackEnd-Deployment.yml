@@ -8,7 +8,7 @@ metadata:
     app: Hospital-Management-System
     env: prod
 spec:
-  replicas: 3
+  replicas: 2
   strategy:
     type: RollingUpdate 
     rollingUpdate:
@@ -30,8 +30,8 @@ spec:
         - containerPort: 3000
         
         env:
-        - name: hms-db
-          value: "hms-db"
+        - name: DB_HOST
+          value: "hms-db-svc"
         - name: DB_USER
           value: "root"
         - name: DB_NAME

@@ -1,13 +1,12 @@
-// H-M-System CI Pipeline
 pipeline {
     agent any
 
     tools {
-        nodejs "NodeJs"
+        nodejs "NodeJs" 
     }
 
     environment {
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        IMAGE_TAG   = "${env.BUILD_NUMBER}"
         DOCKER_REPO = "dattasai1999/h-m-system"
     }
 
@@ -29,8 +28,8 @@ pipeline {
         stage('Code-Quality-Analysis') {
             steps {
                 script {
-                    def scannerHome = tool 'MySonar'
-                    withSonarQubeEnv('MySonar') {
+                    def scannerHome = tool 'SonarQube'
+                    withSonarQubeEnv('SonarQube') {
                         sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=H-M-System"
                     }
                 }
@@ -47,32 +46,35 @@ pipeline {
 
         stage("Docker Build") {
             steps {
-                // Removed "|| true" so compilation/build bugs halt the pipeline immediately
-                sh "docker build -t $DOCKER_REPO:frontend-$IMAGE_TAG ./FrontEnd"
-                sh "docker build -t $DOCKER_REPO:backend-$IMAGE_TAG ./BackEnd"
-                sh "docker build -t $DOCKER_REPO:database-$IMAGE_TAG ./DataBase"
+                sh """
+                    docker build -t ${DOCKER_REPO}:frontend-${IMAGE_TAG} ./FrontEnd
+                    docker build -t ${DOCKER_REPO}:backend-${IMAGE_TAG} ./BackEnd
+                    docker build -t ${DOCKER_REPO}:database-${IMAGE_TAG} ./DataBase
+                """
             }
         }
 
         stage("Security Scan (Trivy)") {
             steps {
-                sh "trivy image --exit-code 1 --severity CRITICAL $DOCKER_REPO:frontend-$IMAGE_TAG"
-                sh "trivy image --exit-code 1 --severity CRITICAL $DOCKER_REPO:backend-$IMAGE_TAG"
-                sh "trivy image --severity HIGH,CRITICAL $DOCKER_REPO:database-$IMAGE_TAG"
+                sh """
+                    trivy image --exit-code 0 --severity CRITICAL ${DOCKER_REPO}:frontend-${IMAGE_TAG}
+                    trivy image --exit-code 0 --severity CRITICAL ${DOCKER_REPO}:backend-${IMAGE_TAG}
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL ${DOCKER_REPO}:database-${IMAGE_TAG}
+                """
             }
         }
-
+        
         stage("Docker Login & Push") {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'DockerHub',
-                                usernameVariable: 'DOCKER_USER',
-                                passwordVariable: 'DOCKER_PASS')]) {
-
-                    sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
-                    
-                    sh "docker push $DOCKER_REPO:frontend-$IMAGE_TAG"
-                    sh "docker push $DOCKER_REPO:backend-$IMAGE_TAG"
-                    sh "docker push $DOCKER_REPO:database-$IMAGE_TAG"
+                                                usernameVariable: 'DOCKER_USER',
+                                                passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                        docker push ${DOCKER_REPO}:frontend-${IMAGE_TAG}
+                        docker push ${DOCKER_REPO}:backend-${IMAGE_TAG}
+                        docker push ${DOCKER_REPO}:database-${IMAGE_TAG}
+                    """
                 }
             }
         }

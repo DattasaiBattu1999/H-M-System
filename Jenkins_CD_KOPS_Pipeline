@@ -1,25 +1,49 @@
-// H-M-System Deployment Pipeline (KOPS Variant)
 pipeline {
     agent any
 
     environment {
-        AWS_REGION       = "ap-south-1" 
+        AWS_REGION       = "ap-southeast-1" 
         CLUSTER_NAME     = "hm-kops-cluster.k8s.local" 
         KOPS_STATE_STORE = "s3://aws-hm-system-bucket" 
-        K8S_NAMESPACE    = "Prod" 
+        K8S_NAMESPACE    = "Qa" 
     }
 
     stages {
         stage('Fetch Artifact from CI') {
             steps {
                 copyArtifacts(
-                    projectName: 'H-M-System CI',
+                    projectName: 'H-M-System_CI',
                     selector: lastSuccessful()
                 )
                 script {
                     env.IMAGE_TAG = readFile('image_tag.txt').trim()
                     echo "Deploying Version: ${env.IMAGE_TAG}"
                 }
+            }
+        }
+        
+        stage('Create KOPS Cluster') {
+            steps {
+                sh """
+                    # 1. Check if the cluster configuration already exists in S3. If not, initialize it.
+                    kops get cluster --name=${CLUSTER_NAME} --state=${KOPS_STATE_STORE} || \\
+                    kops create cluster \
+                        --name=${CLUSTER_NAME} \
+                        --state=${KOPS_STATE_STORE} \
+                        --zones=ap-southeast-1a,ap-southeast-1b \
+                        --control-plane-size=c7i-flex.large \
+                        --control-plane-count=1 \
+                        --node-count=2 \
+                        --node-size=t3.micro \
+                        --image=ami-05b741ae2ab9f1742 \
+                        --yes
+
+                    # 2. Execute the build update to actually provision AWS EC2 instances/networks
+                    kops update cluster --name=${CLUSTER_NAME} --state=${KOPS_STATE_STORE} --yes
+                    
+                    # 3. Wait for the infrastructure to stabilize before moving to application deployment
+                    kops validate cluster --name=${CLUSTER_NAME} --state=${KOPS_STATE_STORE} --wait 15m
+                """
             }
         }
 
@@ -37,17 +61,17 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh """
-                    # 1. Safety Check: Create the namespace if it doesn't exist
+                    # 1. Safety Check: Automatically create the target namespace if missing
                     kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}
 
-                    # 2. Create clean runtime copies of manifests
+                    # 2. Clean and provision workspace runtime directory
                     rm -rf K8S-Generated
                     cp -r K8S-Files K8S-Generated
                     
-                    # 3. Target and swap image tags safely
+                    # 3. Token substitution: Swap out placeholder strings with actual built version tags
                     find K8S-Generated/ -name "*.yml" -exec sed -i "s|IMAGE_TAG|${IMAGE_TAG}|g" {} +
                     
-                    # 4. Apply manifest groups sequentially forcing your namespace flag
+                    # 4. Sequentially roll out application tiers into the designated namespace context
                     kubectl apply -f K8S-Generated/Security/ -n ${K8S_NAMESPACE}
                     kubectl apply -f K8S-Generated/Base/ -n ${K8S_NAMESPACE}
                     kubectl apply -f K8S-Generated/Networking/ -n ${K8S_NAMESPACE}
@@ -59,8 +83,8 @@ pipeline {
         stage('Verify Rollout') {
             steps {
                 script {
-                    sh "kubectl rollout status deployment/backend-deployment -n ${K8S_NAMESPACE}"
-                    sh "kubectl rollout status deployment/frontend-deployment -n ${K8S_NAMESPACE}"
+                    sh "kubectl rollout status deployment/hms-backend -n ${K8S_NAMESPACE}"
+                    sh "kubectl rollout status deployment/hms-frontend -n ${K8S_NAMESPACE}"
                     
                     sh "kubectl get pods -n ${K8S_NAMESPACE}"
                     sh "kubectl get svc -n ${K8S_NAMESPACE}"
@@ -77,7 +101,7 @@ pipeline {
             echo "Deployment of version ${IMAGE_TAG} successful to KOPS cluster!"
         }
         failure {
-            echo "Deployment failed! Check KOPS cluster or Kubernetes logs."
+            echo "Deployment failed! Check KOPS cluster state or Kubernetes controller logs."
         }
     }
 }

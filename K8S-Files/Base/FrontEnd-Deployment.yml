@@ -8,7 +8,7 @@ metadata:
     app: Hospital-Management-System
     env: prod
 spec:
-  replicas: 3
+  replicas: 2
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -16,7 +16,7 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: hms-frontend-pod # Best practice: use a specific pod label
+      app: hms-frontend-pod
   template:
     metadata:
       labels:
