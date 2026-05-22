@@ -9,8 +9,10 @@ pipeline {
     }
 
     stages {
-        stage('Fetch Artifact from CI') {
+        stage('Checkout & Fetch Artifacts') {
             steps {
+                git credentialsId: 'GitHub', url: 'https://github.com/DattasaiBattu1999/H-M-System.git'
+                
                 copyArtifacts(
                     projectName: 'H-M-System_CI',
                     selector: lastSuccessful()
@@ -25,7 +27,6 @@ pipeline {
         stage('Create KOPS Cluster') {
             steps {
                 sh """
-                    # 1. Check if the cluster configuration already exists in S3. If not, initialize it.
                     kops get cluster --name=${CLUSTER_NAME} --state=${KOPS_STATE_STORE} || \\
                     kops create cluster \
                         --name=${CLUSTER_NAME} \
@@ -38,10 +39,8 @@ pipeline {
                         --image=ami-05b741ae2ab9f1742 \
                         --yes
 
-                    # 2. Execute the build update to actually provision AWS EC2 instances/networks
                     kops update cluster --name=${CLUSTER_NAME} --state=${KOPS_STATE_STORE} --yes
                     
-                    # 3. Wait for the infrastructure to stabilize before moving to application deployment
                     kops validate cluster --name=${CLUSTER_NAME} --state=${KOPS_STATE_STORE} --wait 15m
                 """
             }
@@ -61,17 +60,14 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh """
-                    # 1. Safety Check: Automatically create the target namespace if missing
                     kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}
 
-                    # 2. Clean and provision workspace runtime directory
                     rm -rf K8S-Generated
                     cp -r K8S-Files K8S-Generated
                     
-                    # 3. Token substitution: Swap out placeholder strings with actual built version tags
-                    find K8S-Generated/ -name "*.yml" -exec sed -i "s|IMAGE_TAG|${IMAGE_TAG}|g" {} +
+                    find K8S-Generated/ -name "*.yml" -exec sed -i "s|IMAGE_TAG|${env.IMAGE_TAG}|g" {} +
+                    find K8S-Generated/ -name "*.yml" -exec sed -i "s|namespace: prod|namespace: ${K8S_NAMESPACE}|g" {} +
                     
-                    # 4. Sequentially roll out application tiers into the designated namespace context
                     kubectl apply -f K8S-Generated/Security/ -n ${K8S_NAMESPACE}
                     kubectl apply -f K8S-Generated/Base/ -n ${K8S_NAMESPACE}
                     kubectl apply -f K8S-Generated/Networking/ -n ${K8S_NAMESPACE}
@@ -82,13 +78,12 @@ pipeline {
 
         stage('Verify Rollout') {
             steps {
-                script {
-                    sh "kubectl rollout status deployment/hms-backend -n ${K8S_NAMESPACE}"
-                    sh "kubectl rollout status deployment/hms-frontend -n ${K8S_NAMESPACE}"
-                    
-                    sh "kubectl get pods -n ${K8S_NAMESPACE}"
-                    sh "kubectl get svc -n ${K8S_NAMESPACE}"
-                }
+                // Removed redundant script block to keep syntax cleaner
+                sh "kubectl rollout status deployment/hms-backend -n ${K8S_NAMESPACE}"
+                sh "kubectl rollout status deployment/hms-frontend -n ${K8S_NAMESPACE}"
+                
+                sh "kubectl get pods -n ${K8S_NAMESPACE}"
+                sh "kubectl get svc -n ${K8S_NAMESPACE}"
             }
         }
     }
@@ -98,7 +93,7 @@ pipeline {
             sh "rm -rf K8S-Generated"
         }
         success {
-            echo "Deployment of version ${IMAGE_TAG} successful to KOPS cluster!"
+            echo "Deployment of version ${env.IMAGE_TAG} successful to KOPS cluster!"
         }
         failure {
             echo "Deployment failed! Check KOPS cluster state or Kubernetes controller logs."
