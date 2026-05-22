@@ -1,0 +1,44 @@
+// H-M-System Infrastructure Pipeline
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = "ap-south-1"
+        CLUSTER_NAME = "hm-eks-cluster"
+    }
+
+    stages {
+        stage('Checkout Infrastructure Code') {
+            steps {
+                // Pulls down your repository containing the Terraform folder
+                git credentialsId: 'GitHub', url: 'https://github.com/DattasaiBattu1999/H-M-System.git'
+            }
+        }
+
+        stage('Terraform Init & Apply') {
+            steps {
+                dir('Terraform') {
+                    sh 'terraform init'
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Verify EKS Cluster Context') {
+            steps {
+                // Simple validation to ensure the cluster is active and reachable
+                sh "aws eks --region $AWS_REGION update-kubeconfig --name $CLUSTER_NAME"
+                sh "kubectl cluster-info"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Infrastructure provisioned or updated successfully!"
+        }
+        failure {
+            echo "Infrastructure deployment failed! Check Terraform logs."
+        }
+    }
+}

@@ -1,9 +1,11 @@
+// H-M-System Deployment Pipeline
 pipeline {
     agent any
 
     environment {
         AWS_REGION = "ap-south-1"
         CLUSTER_NAME = "hm-eks-cluster"
+        K8S_NAMESPACE = "default" 
     }
 
     stages {
@@ -20,15 +22,6 @@ pipeline {
             }
         }
 
-        stage('Terraform Init & Apply') {
-            steps {
-                dir('Terraform') {
-                    sh 'terraform init'
-                    sh 'terraform apply -auto-approve'
-                }
-            }
-        }
-
         stage('Update kubeconfig') {
             steps {
                 sh "aws eks --region $AWS_REGION update-kubeconfig --name $CLUSTER_NAME"
@@ -38,14 +31,18 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh """
-                    # Update placeholders in ALL nested subdirectories
-                    find K8S-Files/ -name "*.yml" -exec sed -i "s|IMAGE_TAG|${IMAGE_TAG}|g" {} +
+                    # Create clean runtime copies of manifests
+                    rm -rf K8S-Generated
+                    cp -r K8S-Files K8S-Generated
                     
-                    # Sequential deployment based on your folder structure
-                    kubectl apply -f K8S-Files/Security/
-                    kubectl apply -f K8S-Files/Base/
-                    kubectl apply -f K8S-Files/Networking/
-                    kubectl apply -f K8S-Files/Auto-scalling/
+                    # Target and swap image tags safely
+                    find K8S-Generated/ -name "*.yml" -exec sed -i "s|IMAGE_TAG|${IMAGE_TAG}|g" {} +
+                    
+                    # Apply manifest groups sequentially
+                    kubectl apply -f K8S-Generated/Security/
+                    kubectl apply -f K8S-Generated/Base/
+                    kubectl apply -f K8S-Generated/Networking/
+                    kubectl apply -f K8S-Generated/Auto-scalling/
                 """
             }
         }
@@ -53,17 +50,20 @@ pipeline {
         stage('Verify Rollout') {
             steps {
                 script {
-                    sh 'kubectl rollout status deployment/backend-deployment'
-                    sh 'kubectl rollout status deployment/frontend-deployment'
+                    sh "kubectl rollout status deployment/backend-deployment -n ${K8S_NAMESPACE}"
+                    sh "kubectl rollout status deployment/frontend-deployment -n ${K8S_NAMESPACE}"
                     
-                    sh 'kubectl get pods'
-                    sh 'kubectl get svc'
+                    sh "kubectl get pods -n ${K8S_NAMESPACE}"
+                    sh "kubectl get svc -n ${K8S_NAMESPACE}"
                 }
             }
         }
     }
 
     post {
+        always {
+            sh "rm -rf K8S-Generated"
+        }
         success {
             echo "Deployment of version ${IMAGE_TAG} successful!"
         }

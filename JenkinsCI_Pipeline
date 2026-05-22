@@ -1,4 +1,4 @@
-//H-M-System CI Pipeline.
+// H-M-System CI Pipeline
 pipeline {
     agent any
 
@@ -12,7 +12,6 @@ pipeline {
     }
 
     stages {
-
         stage('Code') {
             steps {
                 git credentialsId: 'GitHub', url: 'https://github.com/DattasaiBattu1999/H-M-System.git'
@@ -46,11 +45,12 @@ pipeline {
             }
         }
 
-        stage("Docker Build (with cache)") {
+        stage("Docker Build") {
             steps {
-                sh "docker build -t $DOCKER_REPO:frontend-$IMAGE_TAG ./FrontEnd || true"
-                sh "docker build -t $DOCKER_REPO:backend-$IMAGE_TAG ./BackEnd || true"
-                sh "docker build -t $DOCKER_REPO:database-$IMAGE_TAG ./DataBase || true"
+                // Removed "|| true" so compilation/build bugs halt the pipeline immediately
+                sh "docker build -t $DOCKER_REPO:frontend-$IMAGE_TAG ./FrontEnd"
+                sh "docker build -t $DOCKER_REPO:backend-$IMAGE_TAG ./BackEnd"
+                sh "docker build -t $DOCKER_REPO:database-$IMAGE_TAG ./DataBase"
             }
         }
 
@@ -65,10 +65,10 @@ pipeline {
         stage("Docker Login & Push") {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'DockerHub',
-                usernameVariable: 'DOCKER_USER',
-                passwordVariable: 'DOCKER_PASS')]) {
+                                usernameVariable: 'DOCKER_USER',
+                                passwordVariable: 'DOCKER_PASS')]) {
 
-                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                    sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
                     
                     sh "docker push $DOCKER_REPO:frontend-$IMAGE_TAG"
                     sh "docker push $DOCKER_REPO:backend-$IMAGE_TAG"
@@ -86,16 +86,17 @@ pipeline {
     }
 
     post {
-		always {
-			mail(
-				to: 'battudattasai99@gmail.com',
-				subject: "Pipeline Status: ${currentBuild.currentResult} - ${env.JOB_NAME} # ${env.BUILD_NUMBER}",
-				body: """
-					Build Status: ${currentBuild.currentResult},
-					Job: ${env.JOB_NAME},
-					Build Number: ${env.BUILD_NUMBER},
-					Full URL: ${env.RUN_DISPLAY_URL}
-			""")
-		}
+        always {
+            mail(
+                to: 'battudattasai99@gmail.com',
+                subject: "Pipeline Status: ${currentBuild.currentResult} - ${env.JOB_NAME} # ${env.BUILD_NUMBER}",
+                body: """
+                    Build Status: ${currentBuild.currentResult},
+                    Job: ${env.JOB_NAME},
+                    Build Number: ${env.BUILD_NUMBER},
+                    Full URL: ${env.RUN_DISPLAY_URL}
+                """
+            )
+        }
     }
 }
