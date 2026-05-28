@@ -14,7 +14,7 @@ variable "eks_version" {
 }
 
 variable "private_subnet_ids" {
-  description = "Private Subnet IDs"
+  description = "The list of private subnets for EKS worker nodes"
   type        = list(string)
 }
 
@@ -32,7 +32,6 @@ variable "node_min_size" {
 
 variable "instance_types" {
   type = list(string)
-
   default = [
     "t3.small"
   ]
@@ -41,9 +40,4 @@ variable "instance_types" {
 variable "vpc_id" {
   type        = string
   description = "The VPC ID forwarded from the VPC module"
-}
-
-variable "private_subnet_ids" {
-  type        = list(string)
-  description = "The list of private subnets for EKS worker nodes"
 }
