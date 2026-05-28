@@ -37,3 +37,13 @@ variable "instance_types" {
     "t3.small"
   ]
 }
+
+variable "vpc_id" {
+  type        = string
+  description = "The VPC ID forwarded from the VPC module"
+}
+
+variable "private_subnet_ids" {
+  type        = list(string)
+  description = "The list of private subnets for EKS worker nodes"
+}
