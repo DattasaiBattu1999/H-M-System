@@ -10,7 +10,7 @@ variable "cluster_name" {
 
 variable "eks_version" {
   description = "EKS Kubernetes Version"
-  default     = "1.30"
+  default     = "1.36"
 }
 
 variable "private_subnet_ids" {
